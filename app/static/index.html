@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>束线联锁规程 · ioco 静止输出复核</title>
+<style>
+  :root {
+    --bg: #f4f6f9; --panel: #fff; --line: #d8dee9; --ink: #1f2933;
+    --muted: #64717e; --blue: #1d5fd0; --red: #c62828; --green: #1b7a3d;
+    --red-bg: #fdecea; --green-bg: #e8f5ec; --amber-bg: #fff7e0;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 14px/1.55 "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif; }
+  header { background: #10213f; color: #fff; padding: 18px 28px; }
+  header h1 { margin: 0; font-size: 19px; font-weight: 650; }
+  header p { margin: 4px 0 0; color: #aebfd8; font-size: 13px; }
+  main { max-width: 1180px; margin: 22px auto; padding: 0 20px 60px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+  .panel { background: var(--panel); border: 1px solid var(--line);
+           border-radius: 10px; padding: 16px 18px; }
+  .panel h2 { margin: 0 0 4px; font-size: 15px; }
+  .panel .role { font-size: 12px; color: var(--muted); margin-bottom: 12px; }
+  label { display: block; font-size: 12px; color: var(--muted); margin: 10px 0 3px; }
+  input[type=text] { width: 100%; padding: 7px 9px; border: 1px solid var(--line);
+                     border-radius: 6px; font-size: 13px; font-family: inherit; }
+  input[type=text]:focus { outline: 2px solid #bcd3f7; border-color: var(--blue); }
+  table.trans { width: 100%; border-collapse: collapse; margin-top: 6px; }
+  table.trans th { text-align: left; font-size: 11px; color: var(--muted);
+                   font-weight: 500; padding: 2px 4px; }
+  table.trans td { padding: 3px 4px 0; vertical-align: middle; }
+  table.trans input { padding: 6px 8px; }
+  .del { border: none; background: none; color: var(--red); cursor: pointer;
+         font-size: 16px; padding: 2px 6px; border-radius: 4px; }
+  .del:hover { background: var(--red-bg); }
+  .rowbtn { margin-top: 8px; background: none; border: 1px dashed var(--line);
+            color: var(--blue); border-radius: 6px; padding: 5px 10px;
+            cursor: pointer; font-size: 12px; }
+  .rowbtn:hover { border-color: var(--blue); }
+  .actions { margin: 18px 0 8px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  button.primary { background: var(--blue); color: #fff; border: none;
+                   padding: 10px 26px; border-radius: 7px; font-size: 14px;
+                   cursor: pointer; font-weight: 600; }
+  button.primary:disabled { opacity: .55; cursor: wait; }
+  .preset { background: none; border: 1px solid var(--line); border-radius: 6px;
+            padding: 7px 12px; font-size: 12px; cursor: pointer; color: var(--ink); }
+  .preset:hover { border-color: var(--blue); color: var(--blue); }
+  .hint { font-size: 12px; color: var(--muted); }
+  code { background: #eef1f5; padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+  #result { margin-top: 20px; }
+  .verdict { border-radius: 10px; padding: 14px 18px; border: 1px solid; }
+  .verdict.ok { background: var(--green-bg); border-color: #9ecfaf; }
+  .verdict.bad { background: var(--red-bg); border-color: #e6a6a2; }
+  .verdict h3 { margin: 0 0 4px; font-size: 16px; }
+  .verdict.ok h3 { color: var(--green); }
+  .verdict.bad h3 { color: var(--red); }
+  .evbox { margin-top: 14px; background: var(--panel); border: 1px solid var(--line);
+           border-radius: 10px; padding: 14px 18px; }
+  .evbox h4 { margin: 14px 0 6px; font-size: 13px; }
+  .evbox h4:first-child { margin-top: 0; }
+  .trace { font-size: 14px; }
+  .trace .step { display: inline-block; background: #eef3fb; border: 1px solid #c8d8f2;
+                 border-radius: 6px; padding: 3px 10px; margin: 2px 0; }
+  .trace .arrow { color: var(--muted); margin: 0 6px; }
+  .tag-io-input { color: var(--blue); }
+  .tag-io-output { color: #b25f00; }
+  .tag-io-quiescence { color: #5b3fa1; font-weight: 600; }
+  table.steps { width: 100%; border-collapse: collapse; margin-top: 6px; font-size: 12.5px; }
+  table.steps th, table.steps td { border: 1px solid var(--line); padding: 6px 9px;
+                                   text-align: left; vertical-align: top; }
+  table.steps th { background: #f0f3f8; font-weight: 600; }
+  .states { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .outs { display: flex; flex-wrap: wrap; gap: 6px; }
+  .out-pill { display: inline-block; border-radius: 20px; padding: 2px 12px;
+              font-size: 12px; border: 1px solid; font-family: ui-monospace, monospace; }
+  .out-allow { background: var(--green-bg); border-color: #9ecfaf; color: var(--green); }
+  .out-deny { background: var(--red-bg); border-color: #e6a6a2; color: var(--red);
+              font-weight: 700; }
+  .out-cand { background: #eef3fb; border-color: #c8d8f2; color: var(--blue); }
+  .errors { background: var(--red-bg); border: 1px solid #e6a6a2; border-radius: 10px;
+            padding: 12px 18px; }
+  .errors h3 { margin: 0 0 6px; color: var(--red); font-size: 15px; }
+  .errors li { margin: 3px 0; }
+  .err-side { display: inline-block; min-width: 64px; font-weight: 700; color: var(--red); }
+  .empty { color: var(--muted); font-size: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>束线联锁控制器 · 规程升级 ioco 静止输出复核</h1>
+  <p>按 ioco 语义纳入内部静默（τ）迁移与可观察静止（δ）：候选在旧规程每条可执行历史后可能给出的输出，必须为旧规程所允许。</p>
+</header>
+<main>
+  <div class="grid">
+    <section class="panel" id="panel-spec">
+      <h2>旧规程（规范）</h2>
+      <div class="role">升级前在运规程</div>
+      <div data-editor="spec"></div>
+    </section>
+    <section class="panel" id="panel-candidate">
+      <h2>候选规程（实现）</h2>
+      <div class="role">升级待发布规程</div>
+      <div data-editor="candidate"></div>
+    </section>
+  </div>
+
+  <div class="actions">
+    <button class="primary" id="submit-btn" type="button">提交复核</button>
+    <button class="preset" data-preset="rename" type="button">示例：仅位置改名（应一致）</button>
+    <button class="preset" data-preset="alarm" type="button">示例：命令后报警（应不一致）</button>
+    <button class="preset" data-preset="tau" type="button">示例：静默后未允许确认（应不一致）</button>
+  </div>
+  <p class="hint">
+    标签语法：输入以 <code>?</code> 结尾（如 <code>复位?</code>），输出以 <code>!</code> 结尾（如 <code>报警!</code>）；
+    内部迁移写 <code>静默</code>；在某位置输出标签列写 <code>静止</code> 表示将该输出明确标记为静止（可观察 δ，目标位置填本位置即可）。
+  </p>
+
+  <div id="result" aria-live="polite"></div>
+</main>
+<script src="/static/app.js"></script>
+</body>
+</html>
